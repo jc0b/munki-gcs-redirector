@@ -18,7 +18,7 @@ ENV AUTH_USERNAME=bob
 ENV AUTH_PASSWORD=bobspassword
 ENV GCS_BUCKET_NAME=some_bucket
 
-COPY --from=build_base /build/munki-gcs-redirector/out/redirector /app/redirector
+COPY --from=build_base /build/munki-gcs-redirector/out/munki-gcs-redirector /app/munki-gcs-redirector
 
 EXPOSE 8080
 
