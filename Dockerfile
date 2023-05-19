@@ -22,4 +22,4 @@ COPY --from=build_base /build/munki-gcs-redirector/out/munki-gcs-redirector /app
 
 EXPOSE 8080
 
-CMD ["/app/redirector"]
+CMD ["/app/munki-gcs-redirector"]
