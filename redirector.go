@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -35,8 +36,14 @@ func (app *application) create_signed_url(w http.ResponseWriter, r *http.Request
 	}
 	defer client.Close()
 
+	decoded_uri, err := url.QueryUnescape(r.RequestURI[1:])
+
+	if err != nil {
+		log.Fatalf("Failed to decode request: %v", err)
+	}
+
 	expires := time.Now().Add(time.Minute * 15)
-	url, err := client.Bucket(app.gcp_conf.gcs_bucket_name).SignedURL(r.RequestURI[1:], &storage.SignedURLOptions{
+	url, err := client.Bucket(app.gcp_conf.gcs_bucket_name).SignedURL(decoded_uri, &storage.SignedURLOptions{
 		Method:  "GET",
 		Expires: expires,
 		Scheme:  storage.SigningSchemeV4,
