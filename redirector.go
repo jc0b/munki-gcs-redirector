@@ -23,18 +23,11 @@ type application struct {
 		gcloud_creds_path string
 		gcs_bucket_name   string
 	}
+	storageClient *storage.Client
 }
 
 func (app *application) create_signed_url(w http.ResponseWriter, r *http.Request) {
 	log.Printf("- %s - %s - %s", r.RemoteAddr, r.RequestURI, r.Header.Get("User-Agent"))
-	ctx := context.Background()
-
-	// Creates a client.
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
-	defer client.Close()
 
 	decoded_uri, err := url.QueryUnescape(r.RequestURI[1:])
 
@@ -43,7 +36,7 @@ func (app *application) create_signed_url(w http.ResponseWriter, r *http.Request
 	}
 
 	expires := time.Now().Add(time.Minute * 15)
-	url, err := client.Bucket(app.gcp_conf.gcs_bucket_name).SignedURL(decoded_uri, &storage.SignedURLOptions{
+	url, err := app.storageClient.Bucket(app.gcp_conf.gcs_bucket_name).SignedURL(decoded_uri, &storage.SignedURLOptions{
 		Method:  "GET",
 		Expires: expires,
 		Scheme:  storage.SigningSchemeV4,
@@ -84,6 +77,14 @@ func (app *application) basicAuth(next http.HandlerFunc) http.HandlerFunc {
 func main() {
 	app := new(application)
 
+	// Creates a client.
+	client, err := storage.NewClient(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to initialize storage client: %v", err)
+	}
+	app.storageClient = client
+	defer app.storageClient.Close()
+
 	app.auth.username = os.Getenv("AUTH_USERNAME")
 	app.auth.password = os.Getenv("AUTH_PASSWORD")
 	app.gcp_conf.gcs_bucket_name = os.Getenv("GCS_BUCKET_NAME")
@@ -112,6 +113,7 @@ func main() {
 	}
 
 	log.Printf("starting server on %s", srv.Addr)
-	err := srv.ListenAndServe()
-	log.Fatal(err)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Server failed: %v", err)
+	}
 }
